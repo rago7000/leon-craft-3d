@@ -1,0 +1,16 @@
+export const CHUNK_SIZE = 16;
+export const WORLD_HEIGHT = 128;
+export const SEA_LEVEL = 62;
+export const BASE_HEIGHT = 64;
+export const RENDER_DISTANCE = 5;
+export const MAX_MESHES_PER_FRAME = 2;
+export const PLAYER_WIDTH = 0.6;
+export const PLAYER_HEIGHT = 1.8;
+export const PLAYER_EYE_HEIGHT = 1.6;
+export const WALK_SPEED = 4.3;
+export const SPRINT_SPEED = 5.6;
+export const JUMP_VELOCITY = 8;
+export const GRAVITY = -24;
+export const RAY_DISTANCE = 6;
+export const DAY_DURATION = 600; // seconds for full cycle
+export const ATLAS_TILES = 16; // 16x16 grid
