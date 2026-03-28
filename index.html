@@ -1,76 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Leon Craft 3D</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     canvas { display: block; }
 
+    :root {
+      --font: 'Fredoka', 'Segoe UI', system-ui, sans-serif;
+      --green: #4caf50;
+      --green-dark: #2e7d32;
+      --blue: #2196f3;
+      --blue-dark: #1565c0;
+      --gold: #ffd740;
+      --orange: #ff9800;
+      --pink: #e91e63;
+      --radius: 16px;
+    }
+
+    /* ===== START SCREEN ===== */
     #start-screen {
       position: fixed; inset: 0;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      background: linear-gradient(180deg, #1a0a2e 0%, #0d47a1 50%, #4caf50 100%);
-      z-index: 100; cursor: pointer;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(180deg, #1a0a2e 0%, #1565c0 40%, #4caf50 80%, #8bc34a 100%);
+      z-index: 100;
+      font-family: var(--font);
     }
-    #start-screen h1 {
-      font-size: 72px; font-weight: 900;
-      color: #fff; text-shadow: 4px 4px 0 #000, -2px -2px 0 #4caf50;
-      letter-spacing: 4px; margin-bottom: 8px;
-      font-family: 'Courier New', monospace;
-    }
-    #start-screen .subtitle {
-      font-size: 18px; color: rgba(255,255,255,0.7);
-      margin-bottom: 48px;
-    }
-    #start-screen .play-btn {
-      font-size: 24px; padding: 16px 48px;
-      background: #4caf50; color: #fff; border: 4px solid #2e7d32;
-      font-weight: bold; cursor: pointer;
-      font-family: 'Courier New', monospace;
-      text-shadow: 2px 2px 0 #000;
-      transition: transform 0.1s;
-    }
-    #start-screen .play-btn:hover { transform: scale(1.05); background: #66bb6a; }
     #start-screen.hidden { display: none; }
 
+    #start-screen h1 {
+      font-size: 64px; font-weight: 700;
+      color: var(--gold);
+      text-shadow: 4px 4px 0 #000, -1px -1px 0 var(--orange), 2px 0 0 var(--orange);
+      letter-spacing: 3px; margin-bottom: 4px;
+      animation: titleBounce 2s ease-in-out infinite;
+    }
+    @keyframes titleBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    #start-screen .subtitle {
+      font-size: 18px; color: rgba(255,255,255,0.8);
+      margin-bottom: 40px; font-weight: 400;
+    }
+
+    .mode-buttons {
+      display: flex; gap: 24px; margin-bottom: 24px;
+    }
+    .mode-btn {
+      width: 220px; padding: 20px 16px;
+      border: 4px solid rgba(0,0,0,0.3); border-radius: var(--radius);
+      cursor: pointer; font-family: var(--font);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+    }
+    .mode-btn:hover { transform: scale(1.06); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .mode-btn:active { transform: scale(0.98); }
+
+    .mode-btn.leon { background: linear-gradient(135deg, var(--green), #66bb6a); color: #fff; }
+    .mode-btn.libre { background: linear-gradient(135deg, var(--blue), #42a5f5); color: #fff; }
+
+    .mode-btn .icon { font-size: 40px; line-height: 1; }
+    .mode-btn .label { font-size: 22px; font-weight: 700; }
+    .mode-btn .desc { font-size: 13px; opacity: 0.85; text-align: center; line-height: 1.3; }
+
+    .save-buttons {
+      display: flex; gap: 12px; margin-top: 8px;
+    }
+    .save-btn {
+      padding: 10px 20px; border: 3px solid rgba(255,255,255,0.2);
+      border-radius: 12px; background: rgba(255,255,255,0.1);
+      color: #fff; font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .save-btn:hover { background: rgba(255,255,255,0.2); }
+    .save-btn.hidden { display: none; }
+    .save-btn.danger { border-color: rgba(255,80,80,0.3); color: #ff8a80; }
+    .save-btn.danger:hover { background: rgba(255,80,80,0.15); }
+
+    /* ===== CROSSHAIR ===== */
     #crosshair {
       position: fixed; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      color: #fff; font-size: 24px; font-weight: 100;
+      width: 24px; height: 24px;
       pointer-events: none; z-index: 10;
-      text-shadow: 0 0 2px #000;
-      font-family: monospace;
     }
+    #crosshair::before, #crosshair::after {
+      content: ''; position: absolute; background: rgba(255,255,255,0.85);
+      border-radius: 2px;
+      box-shadow: 0 0 3px rgba(0,0,0,0.5);
+    }
+    #crosshair::before { width: 2px; height: 24px; left: 11px; top: 0; }
+    #crosshair::after { width: 24px; height: 2px; top: 11px; left: 0; }
 
-    #hotbar {
+    /* ===== HOTBAR ===== */
+    #hotbar-container {
       position: fixed; bottom: 16px; left: 50%;
       transform: translateX(-50%);
-      display: flex; gap: 2px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       pointer-events: none; z-index: 10;
     }
+    #block-name {
+      font-family: var(--font); font-size: 16px; font-weight: 600;
+      color: #fff; text-shadow: 1px 1px 2px #000;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #block-name.visible { opacity: 1; }
+
+    #hotbar {
+      display: flex; gap: 4px;
+    }
     .hotbar-slot {
-      width: 48px; height: 48px;
-      border: 2px solid rgba(255,255,255,0.3);
-      background: rgba(0,0,0,0.5);
+      width: 56px; height: 56px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.45);
       display: flex; align-items: center; justify-content: center;
       position: relative;
+      transition: border-color 0.15s, transform 0.1s;
     }
-    .hotbar-slot.active { border-color: #fff; background: rgba(255,255,255,0.15); }
+    .hotbar-slot.active {
+      border-color: var(--gold);
+      background: rgba(255,215,64,0.15);
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(255,215,64,0.3);
+    }
     .hotbar-slot .slot-num {
-      position: absolute; top: 1px; left: 3px;
-      font-size: 10px; color: rgba(255,255,255,0.5);
-      font-family: monospace;
+      position: absolute; top: 2px; left: 5px;
+      font-size: 11px; color: rgba(255,255,255,0.5);
+      font-family: var(--font); font-weight: 600;
     }
     .hotbar-slot .block-icon {
-      width: 32px; height: 32px;
-      image-rendering: pixelated;
+      width: 36px; height: 36px;
+      border-radius: 6px; border: 2px solid rgba(0,0,0,0.2);
     }
 
+    /* ===== DEBUG ===== */
     #debug {
       position: fixed; top: 8px; left: 8px;
       color: #fff; font-family: monospace; font-size: 12px;
@@ -79,17 +151,164 @@
       display: none;
     }
     #debug.visible { display: block; }
+
+    /* ===== TUTORIAL ===== */
+    #tutorial {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; justify-content: center;
+      padding-top: 100px;
+      pointer-events: none; z-index: 50;
+    }
+    #tutorial.hidden { display: none; }
+
+    .tutorial-card {
+      background: rgba(0,0,0,0.75);
+      border: 3px solid var(--gold);
+      border-radius: 20px;
+      padding: 24px 40px;
+      text-align: center;
+      animation: tutorialPulse 2s ease-in-out infinite;
+    }
+    @keyframes tutorialPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,215,64,0.3); }
+      50% { transform: scale(1.02); box-shadow: 0 0 20px 4px rgba(255,215,64,0.2); }
+    }
+    .tutorial-card .step-icon { font-size: 48px; margin-bottom: 8px; }
+    .tutorial-card .step-text {
+      font-family: var(--font); font-size: 28px; font-weight: 700;
+      color: #fff; margin-bottom: 4px;
+    }
+    .tutorial-card .step-hint {
+      font-family: var(--font); font-size: 16px; color: rgba(255,255,255,0.6);
+    }
+    .tutorial-skip {
+      pointer-events: all;
+      margin-top: 12px;
+      padding: 6px 16px; border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 8px; background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5); font-family: var(--font); font-size: 12px;
+      cursor: pointer;
+    }
+    .tutorial-skip:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* ===== MISSIONS ===== */
+    #missions {
+      position: fixed; top: 16px; left: 16px;
+      pointer-events: none; z-index: 20;
+      font-family: var(--font);
+    }
+    #missions.hidden { display: none; }
+
+    .mission-panel {
+      background: rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 14px 18px;
+      min-width: 240px;
+    }
+    .mission-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--gold); margin-bottom: 10px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .mission-item {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 8px; font-size: 14px; color: #fff;
+    }
+    .mission-item.completed { color: rgba(255,255,255,0.4); }
+    .mission-item .check { font-size: 16px; }
+    .mission-item .progress-bar {
+      height: 6px; background: rgba(255,255,255,0.1);
+      border-radius: 3px; flex: 1; margin-left: 4px;
+      overflow: hidden;
+    }
+    .mission-item .progress-fill {
+      height: 100%; background: var(--green);
+      border-radius: 3px; transition: width 0.3s;
+    }
+    .mission-item.completed .progress-fill { background: rgba(255,255,255,0.3); }
+
+    /* ===== REWARDS ===== */
+    #reward-overlay {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      pointer-events: none; z-index: 60;
+    }
+    #reward-overlay.hidden { display: none; }
+
+    .reward-text {
+      font-family: var(--font); font-size: 52px; font-weight: 700;
+      color: var(--gold);
+      text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255,215,64,0.5);
+      animation: rewardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes rewardPop {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .star {
+      position: fixed; font-size: 32px; pointer-events: none;
+      animation: starFloat 2s ease-out forwards;
+    }
+    @keyframes starFloat {
+      0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+      100% { transform: translateY(-200px) rotate(360deg) scale(0); opacity: 0; }
+    }
   </style>
 </head>
 <body>
   <div id="start-screen">
     <h1>LEON CRAFT 3D</h1>
-    <div class="subtitle">A Minecraft-like adventure</div>
-    <button class="play-btn">CLICK TO PLAY</button>
+    <div class="subtitle">Un mundo de bloques para explorar y construir</div>
+    <div class="mode-buttons">
+      <button class="mode-btn leon" id="btn-leon">
+        <span class="icon">⭐</span>
+        <span class="label">Modo Leon</span>
+        <span class="desc">Facil y divertido<br>con misiones y tutorial</span>
+      </button>
+      <button class="mode-btn libre" id="btn-libre">
+        <span class="icon">🚀</span>
+        <span class="label">Modo Libre</span>
+        <span class="desc">Controles rapidos<br>sin limites</span>
+      </button>
+    </div>
+    <div class="save-buttons">
+      <button class="save-btn hidden" id="btn-load">📂 Cargar Mundo</button>
+      <button class="save-btn danger hidden" id="btn-reset">🗑️ Reiniciar Mundo</button>
+    </div>
   </div>
-  <div id="crosshair">+</div>
-  <div id="hotbar"></div>
+
+  <div id="crosshair"></div>
+
+  <div id="hotbar-container">
+    <div id="block-name"></div>
+    <div id="hotbar"></div>
+  </div>
+
   <div id="debug"></div>
+
+  <div id="tutorial" class="hidden">
+    <div class="tutorial-card">
+      <div class="step-icon"></div>
+      <div class="step-text"></div>
+      <div class="step-hint"></div>
+      <button class="tutorial-skip">Saltar tutorial</button>
+    </div>
+  </div>
+
+  <div id="missions" class="hidden">
+    <div class="mission-panel">
+      <div class="mission-title">⭐ Misiones</div>
+      <div id="mission-list"></div>
+    </div>
+  </div>
+
+  <div id="reward-overlay" class="hidden">
+    <div class="reward-text"></div>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

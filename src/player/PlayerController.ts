@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { InputManager } from '../core/InputManager';
-import { WALK_SPEED, SPRINT_SPEED } from '../utils/constants';
+import { GameMode } from '../core/GameMode';
 
 export class PlayerController {
   controls: PointerLockControls;
@@ -9,13 +9,23 @@ export class PlayerController {
   velocity = new THREE.Vector3();
   position: THREE.Vector3;
   private input: InputManager;
+  private gameMode: GameMode;
   onGround = false;
 
-  constructor(camera: THREE.PerspectiveCamera, input: InputManager, domElement: HTMLElement) {
+  // Track distance for missions
+  distanceMoved = 0;
+  private lastPos = new THREE.Vector3();
+
+  constructor(camera: THREE.PerspectiveCamera, input: InputManager, gameMode: GameMode, domElement: HTMLElement) {
     this.camera = camera;
     this.input = input;
+    this.gameMode = gameMode;
     this.controls = new PointerLockControls(camera, domElement);
     this.position = camera.position;
+    this.lastPos.copy(this.position);
+
+    // Apply sensitivity to PointerLockControls
+    this.controls.pointerSpeed = gameMode.config.sensitivity;
   }
 
   get isLocked(): boolean {
@@ -29,9 +39,12 @@ export class PlayerController {
   update(dt: number): void {
     if (!this.controls.isLocked) return;
 
-    const speed = this.input.isDown('ShiftLeft') ? SPRINT_SPEED : WALK_SPEED;
+    // Update sensitivity if mode changes
+    this.controls.pointerSpeed = this.gameMode.config.sensitivity;
 
-    // Movement direction relative to camera yaw (no pitch)
+    const config = this.gameMode.config;
+    const speed = (config.canSprint && this.input.isDown('ShiftLeft')) ? config.sprintSpeed : config.walkSpeed;
+
     const forward = new THREE.Vector3();
     this.camera.getWorldDirection(forward);
     forward.y = 0;
@@ -52,5 +65,11 @@ export class PlayerController {
 
     this.velocity.x = moveDir.x * speed;
     this.velocity.z = moveDir.z * speed;
+
+    // Track distance
+    const dx = this.position.x - this.lastPos.x;
+    const dz = this.position.z - this.lastPos.z;
+    this.distanceMoved += Math.sqrt(dx * dx + dz * dz);
+    this.lastPos.copy(this.position);
   }
 }

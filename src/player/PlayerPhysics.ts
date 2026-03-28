@@ -1,31 +1,35 @@
 import * as THREE from 'three';
-import { GRAVITY, JUMP_VELOCITY, PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_EYE_HEIGHT } from '../utils/constants';
+import { PLAYER_WIDTH, PLAYER_HEIGHT, PLAYER_EYE_HEIGHT } from '../utils/constants';
 import { isSolid } from '../world/BlockRegistry';
 import { World } from '../world/World';
+import { GameMode } from '../core/GameMode';
 
 export class PlayerPhysics {
   private world: World;
+  private gameMode: GameMode;
   position: THREE.Vector3; // eye position
   velocity: THREE.Vector3;
   onGround = false;
 
-  constructor(world: World, position: THREE.Vector3, velocity: THREE.Vector3) {
+  constructor(world: World, gameMode: GameMode, position: THREE.Vector3, velocity: THREE.Vector3) {
     this.world = world;
+    this.gameMode = gameMode;
     this.position = position;
     this.velocity = velocity;
   }
 
   update(dt: number, jumpPressed: boolean): void {
+    const config = this.gameMode.config;
+
     // Apply gravity
-    this.velocity.y += GRAVITY * dt;
+    this.velocity.y += config.gravity * dt;
 
     // Jump
     if (jumpPressed && this.onGround) {
-      this.velocity.y = JUMP_VELOCITY;
+      this.velocity.y = config.jumpVelocity;
       this.onGround = false;
     }
 
-    // Feet position = eye - eyeHeight
     const halfW = PLAYER_WIDTH / 2;
     const feetY = this.position.y - PLAYER_EYE_HEIGHT;
 
@@ -50,11 +54,9 @@ export class PlayerPhysics {
 
     if (this.checkCollision(this.position.x, newFeetY, this.position.z, halfW)) {
       if (this.velocity.y < 0) {
-        // Landing on ground: snap to top of block
         this.position.y = Math.floor(prevFeetY) + 1 + PLAYER_EYE_HEIGHT;
         this.onGround = true;
       } else {
-        // Hit ceiling
         this.position.y -= this.velocity.y * dt;
       }
       this.velocity.y = 0;
@@ -62,7 +64,6 @@ export class PlayerPhysics {
       this.onGround = false;
     }
 
-    // Prevent falling below world
     if (this.position.y < PLAYER_EYE_HEIGHT) {
       this.position.y = PLAYER_EYE_HEIGHT;
       this.velocity.y = 0;
@@ -71,7 +72,6 @@ export class PlayerPhysics {
   }
 
   private checkCollision(px: number, feetY: number, pz: number, halfW: number): boolean {
-    // Check all blocks the player AABB overlaps
     const minX = Math.floor(px - halfW);
     const maxX = Math.floor(px + halfW);
     const minY = Math.floor(feetY);
