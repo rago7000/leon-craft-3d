@@ -13,9 +13,12 @@ import { Tutorial } from './ui/Tutorial';
 import { Missions } from './ui/Missions';
 import { Rewards } from './ui/Rewards';
 import { SoundManager } from './audio/SoundManager';
+import { Pet } from './entities/Pet';
+import { Sparkles } from './rendering/Sparkles';
 import { generateAtlasDataURL } from './rendering/generateAtlas';
 import { RENDER_DISTANCE, BASE_HEIGHT } from './utils/constants';
 import { getTerrainHeight } from './utils/noise';
+import { placeSpawnLandmarks, SPAWN_HOUSE_POS, MAGIC_TREE_POS } from './world/TerrainGenerator';
 
 export class Game {
   private renderer!: THREE.WebGLRenderer;
@@ -35,11 +38,15 @@ export class Game {
   private missions!: Missions;
   private rewards!: Rewards;
   private sound!: SoundManager;
+  private pet: Pet | null = null;
+  private sparkles!: Sparkles;
   private startScreen!: HTMLElement;
   private lastTime = 0;
   private running = false;
   private started = false;
-  private moveDistanceForTutorial = 0;
+  private landmarksPlaced = false;
+  private nearHouse = false;
+  private nearMagicTree = false;
 
   async init(): Promise<void> {
     // Scene
@@ -95,21 +102,26 @@ export class Game {
 
     // Tutorial callbacks
     this.tutorial.onStepComplete = () => {
+      this.addStars(1);
       this.rewards.show();
     };
     this.tutorial.onComplete = () => {
       this.saveManager.tutorialDone = true;
+      this.addStars(2);
       this.saveManager.save();
       this.rewards.show('Tutorial completo!');
-      // Start missions after tutorial
       if (this.gameMode.isLeon) {
         this.missions.start();
       }
     };
 
     // Mission callbacks
-    this.missions.onMissionComplete = (name: string) => {
+    this.missions.onMissionComplete = () => {
+      this.addStars(2);
       this.rewards.show();
+      if (this.sparkles && this.camera) {
+        this.sparkles.emit(this.camera.position.clone().add(new THREE.Vector3(0, -0.5, 0)), 10);
+      }
     };
 
     // Start screen setup
@@ -178,25 +190,40 @@ export class Game {
     // Block interaction
     this.blockInteraction = new BlockInteraction(this.world, this.camera, this.scene);
 
+    // Sparkles (both modes — used for mission rewards)
+    this.sparkles = new Sparkles(this.scene);
+
     // HUD
     this.hud = new HUD(this.gameMode);
 
-    // Load saved world changes
+    // Ensure terrain around spawn is generated
+    this.world.update(spawnX, spawnZ);
+
+    // Place spawn landmarks (Leon mode: house + magic tree)
+    if (this.gameMode.isLeon && !this.landmarksPlaced) {
+      placeSpawnLandmarks(this.world);
+      this.landmarksPlaced = true;
+    }
+
+    // Load saved world changes (applied AFTER landmarks so saved changes override)
     if (loadSave) {
-      // Generate terrain first (need chunks loaded)
-      this.world.update(spawnX, spawnZ);
-      // Apply saved block changes
       const changes = this.saveManager.getChanges();
       for (const change of changes) {
         this.world.setBlock(change.x, change.y, change.z, change.id);
       }
-      // Load mission progress
       this.missions.loadProgress(
         this.saveManager.missions.blocksBroken,
         this.saveManager.missions.blocksPlaced,
         this.saveManager.missions.distanceWalked,
+        this.saveManager.missions.specialBlocksPlaced ?? 0,
         this.saveManager.missions.completedMissions,
       );
+      this.hud.stars = this.saveManager.stars;
+    }
+
+    // Pet (Leon mode only)
+    if (this.gameMode.isLeon) {
+      this.pet = new Pet(this.scene, this.camera.position.x, this.camera.position.y - 1.6, this.camera.position.z);
     }
 
     // Start tutorial/missions for Leon mode
@@ -309,13 +336,51 @@ export class Game {
         }
       }
 
+      // Track special blocks
+      if (this.input.mouseRight && this.hud.selectedBlockId >= 11 && this.hud.selectedBlockId <= 16) {
+        this.missions.specialBlocksPlaced++;
+      }
+
       // Update distance for missions
       this.missions.distanceWalked = this.playerController.distanceMoved;
+
+      // Check proximity to landmarks (Leon mode)
+      if (this.gameMode.isLeon) {
+        const px = this.camera.position.x;
+        const pz = this.camera.position.z;
+
+        // Near spawn house?
+        const dxH = px - SPAWN_HOUSE_POS.x - 2;
+        const dzH = pz - SPAWN_HOUSE_POS.z - 2;
+        if (Math.sqrt(dxH * dxH + dzH * dzH) < 5 && !this.nearHouse) {
+          this.nearHouse = true;
+          this.missions.foundHouse = true;
+          this.sparkles.emit(new THREE.Vector3(SPAWN_HOUSE_POS.x + 2, this.camera.position.y, SPAWN_HOUSE_POS.z + 2), 12);
+        }
+
+        // Near magic tree?
+        const dxT = px - MAGIC_TREE_POS.x;
+        const dzT = pz - MAGIC_TREE_POS.z;
+        if (Math.sqrt(dxT * dxT + dzT * dzT) < 5 && !this.nearMagicTree) {
+          this.nearMagicTree = true;
+          this.missions.foundMagicTree = true;
+          this.sparkles.emit(new THREE.Vector3(MAGIC_TREE_POS.x, this.camera.position.y + 2, MAGIC_TREE_POS.z), 15);
+        }
+      }
     }
+
+    // Pet (Leon mode)
+    if (this.pet && this.playerController.isLocked) {
+      this.pet.update(dt, this.camera.position, this.world);
+    }
+
+    // Sparkles
+    this.sparkles.update(dt);
 
     // Tutorial and missions
     if (this.gameMode.isLeon) {
       this.tutorial.update();
+      this.missions.stars = this.hud.stars;
       this.missions.update();
     }
 
@@ -331,11 +396,17 @@ export class Game {
     this.input.endFrame();
   }
 
+  private addStars(count: number): void {
+    this.hud.addStars(count);
+    this.saveManager.stars = this.hud.stars;
+  }
+
   private saveMissionProgress(): void {
     this.saveManager.missions = {
       blocksBroken: this.missions.blocksBroken,
       blocksPlaced: this.missions.blocksPlaced,
       distanceWalked: this.missions.distanceWalked,
+      specialBlocksPlaced: this.missions.specialBlocksPlaced,
       completedMissions: [...this.missions.completedIds],
     };
   }

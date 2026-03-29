@@ -215,5 +215,98 @@ export function generateAtlasDataURL(): string {
     c.fillRect(x + 2, y + 3, 1, 2);
   });
 
+  // Tile 12,0: Arcoiris (rainbow stripes)
+  drawTile(12, 0, (c, x, y) => {
+    const colors = ['#ff4444', '#ff8800', '#ffdd00', '#44bb44', '#4488ff', '#8844cc'];
+    const h = Math.floor(16 / colors.length);
+    for (let i = 0; i < colors.length; i++) {
+      c.fillStyle = colors[i];
+      c.fillRect(x, y + i * h, 16, h + 1);
+    }
+  });
+
+  // Tile 13,0: Nube (white fluffy)
+  drawTile(13, 0, (c, x, y) => {
+    c.fillStyle = '#eceff1';
+    c.fillRect(x, y, 16, 16);
+    c.fillStyle = '#fff';
+    c.fillRect(x + 2, y + 2, 5, 4);
+    c.fillRect(x + 9, y + 3, 4, 5);
+    c.fillRect(x + 3, y + 9, 6, 4);
+    c.fillRect(x + 11, y + 10, 3, 3);
+    c.fillStyle = '#cfd8dc';
+    c.fillRect(x + 1, y + 13, 4, 2);
+    c.fillRect(x + 8, y + 14, 5, 1);
+  });
+
+  // Tile 14,0: Estrella (gold sparkle)
+  drawTile(14, 0, (c, x, y) => {
+    c.fillStyle = '#ffd740';
+    c.fillRect(x, y, 16, 16);
+    c.fillStyle = '#ffecb3';
+    c.fillRect(x + 6, y + 2, 4, 12);
+    c.fillRect(x + 2, y + 6, 12, 4);
+    c.fillStyle = '#fff';
+    c.fillRect(x + 7, y + 7, 2, 2);
+    c.fillStyle = '#ffab00';
+    c.fillRect(x + 0, y + 0, 2, 2);
+    c.fillRect(x + 14, y + 0, 2, 2);
+    c.fillRect(x + 0, y + 14, 2, 2);
+    c.fillRect(x + 14, y + 14, 2, 2);
+  });
+
+  // Tile 15,0: Brillante (diamond blue)
+  drawTile(15, 0, (c, x, y) => {
+    c.fillStyle = '#4fc3f7';
+    c.fillRect(x, y, 16, 16);
+    c.fillStyle = '#b3e5fc';
+    c.fillRect(x + 3, y + 3, 4, 4);
+    c.fillRect(x + 9, y + 9, 4, 4);
+    c.fillStyle = '#fff';
+    c.fillRect(x + 4, y + 4, 2, 2);
+    c.fillRect(x + 10, y + 10, 2, 2);
+    c.fillRect(x + 7, y + 1, 1, 1);
+    c.fillRect(x + 1, y + 7, 1, 1);
+    c.fillRect(x + 14, y + 7, 1, 1);
+    c.fillRect(x + 7, y + 14, 1, 1);
+  });
+
+  // Tile 0,1: Caramelo (pink/white stripes)
+  drawTile(0, 1, (c, x, y) => {
+    c.fillStyle = '#f48fb1';
+    c.fillRect(x, y, 16, 16);
+    c.fillStyle = '#fce4ec';
+    for (let i = -16; i < 32; i += 4) {
+      c.fillRect(x + i, y, 2, 16);
+      // diagonal effect
+      c.save();
+      c.translate(x + 8, y + 8);
+      c.rotate(Math.PI / 4);
+      c.fillRect(i - 8, -8, 2, 24);
+      c.restore();
+    }
+  });
+
+  // Tile 1,1: Espacial (dark purple with stars)
+  drawTile(1, 1, (c, x, y) => {
+    c.fillStyle = '#311b92';
+    c.fillRect(x, y, 16, 16);
+    c.fillStyle = '#4a148c';
+    c.fillRect(x + 0, y + 8, 16, 8);
+    c.fillStyle = '#fff';
+    c.fillRect(x + 3, y + 2, 1, 1);
+    c.fillRect(x + 8, y + 1, 1, 1);
+    c.fillRect(x + 13, y + 3, 1, 1);
+    c.fillRect(x + 1, y + 7, 1, 1);
+    c.fillRect(x + 6, y + 6, 2, 2);
+    c.fillRect(x + 11, y + 9, 1, 1);
+    c.fillRect(x + 4, y + 12, 1, 1);
+    c.fillRect(x + 9, y + 13, 1, 1);
+    c.fillRect(x + 14, y + 11, 1, 1);
+    c.fillStyle = '#ffd740';
+    c.fillRect(x + 6, y + 5, 1, 1);
+    c.fillRect(x + 7, y + 7, 1, 1);
+  });
+
   return canvas.toDataURL();
 }

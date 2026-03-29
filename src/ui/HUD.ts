@@ -2,12 +2,18 @@ import { BLOCKS } from '../world/BlockRegistry';
 import { InputManager } from '../core/InputManager';
 import { GameMode } from '../core/GameMode';
 
+// Leon mode: balanced mix of base + special blocks
+const LEON_HOTBAR = [1, 4, 9, 11, 12, 13, 14, 15, 16];
+// Free mode: original functional blocks
+const FREE_HOTBAR = [1, 2, 3, 4, 5, 6, 9, 10, 8];
+
 export class HUD {
   selectedSlot = 0;
-  hotbarBlocks = [1, 2, 3, 4, 5, 6, 9, 10, 8];
+  hotbarBlocks: number[];
   private hotbarEl: HTMLElement;
   private debugEl: HTMLElement;
   private blockNameEl: HTMLElement;
+  private starEl: HTMLElement;
   private slots: HTMLElement[] = [];
   private showDebug = false;
   private fps = 0;
@@ -15,13 +21,17 @@ export class HUD {
   private fpsTimer = 0;
   private blockNameTimeout: number | null = null;
   private gameMode: GameMode;
+  stars = 0;
 
   constructor(gameMode: GameMode) {
     this.gameMode = gameMode;
+    this.hotbarBlocks = gameMode.isLeon ? [...LEON_HOTBAR] : [...FREE_HOTBAR];
     this.hotbarEl = document.getElementById('hotbar')!;
     this.debugEl = document.getElementById('debug')!;
     this.blockNameEl = document.getElementById('block-name')!;
+    this.starEl = document.getElementById('star-counter')!;
     this.buildHotbar();
+    this.updateStars();
   }
 
   private buildHotbar(): void {
@@ -103,6 +113,15 @@ export class HUD {
         Chunks: ${chunkCount}
       `;
     }
+  }
+
+  addStars(count: number): void {
+    this.stars += count;
+    this.updateStars();
+  }
+
+  private updateStars(): void {
+    this.starEl.textContent = `⭐ ${this.stars}`;
   }
 
   get selectedBlockId(): number {

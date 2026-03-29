@@ -11,6 +11,7 @@ interface MissionProgress {
   blocksBroken: number;
   blocksPlaced: number;
   distanceWalked: number;
+  specialBlocksPlaced: number;
   completedMissions: number[];
 }
 
@@ -20,6 +21,7 @@ interface SaveData {
   changes: BlockChange[];
   missions: MissionProgress;
   tutorialDone: boolean;
+  stars: number;
   playerX: number;
   playerY: number;
   playerZ: number;
@@ -35,9 +37,11 @@ export class SaveManager {
     blocksBroken: 0,
     blocksPlaced: 0,
     distanceWalked: 0,
+    specialBlocksPlaced: 0,
     completedMissions: [],
   };
   tutorialDone = false;
+  stars = 0;
   playerX = 0.5;
   playerY = 67;
   playerZ = 0.5;
@@ -71,6 +75,7 @@ export class SaveManager {
       changes: this.changes,
       missions: { ...this.missions },
       tutorialDone: this.tutorialDone,
+      stars: this.stars,
       playerX: this.playerX,
       playerY: this.playerY,
       playerZ: this.playerZ,
@@ -93,9 +98,11 @@ export class SaveManager {
         blocksBroken: 0,
         blocksPlaced: 0,
         distanceWalked: 0,
+        specialBlocksPlaced: 0,
         completedMissions: [],
       };
       this.tutorialDone = data.tutorialDone || false;
+      this.stars = data.stars || 0;
       this.playerX = data.playerX || 0.5;
       this.playerY = data.playerY || 67;
       this.playerZ = data.playerZ || 0.5;
@@ -116,9 +123,11 @@ export class SaveManager {
       blocksBroken: 0,
       blocksPlaced: 0,
       distanceWalked: 0,
+      specialBlocksPlaced: 0,
       completedMissions: [],
     };
     this.tutorialDone = false;
+    this.stars = 0;
     localStorage.removeItem(SAVE_KEY);
   }
 }

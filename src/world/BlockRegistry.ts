@@ -47,6 +47,18 @@ export const BLOCKS: BlockDef[] = [
   { id: 9, name: 'Brick', transparent: false, solid: true, faces: uniform([10, 0]), color: '#a0522d' },
   // 10: Glass
   { id: 10, name: 'Glass', transparent: true, solid: true, faces: uniform([11, 0]), color: '#b3e5fc' },
+  // 11: Arcoiris
+  { id: 11, name: 'Arcoiris', transparent: false, solid: true, faces: uniform([12, 0]), color: '#ff6b6b' },
+  // 12: Nube
+  { id: 12, name: 'Nube', transparent: false, solid: true, faces: uniform([13, 0]), color: '#eceff1' },
+  // 13: Estrella
+  { id: 13, name: 'Estrella', transparent: false, solid: true, faces: uniform([14, 0]), color: '#ffd740' },
+  // 14: Brillante
+  { id: 14, name: 'Brillante', transparent: false, solid: true, faces: uniform([15, 0]), color: '#4fc3f7' },
+  // 15: Caramelo
+  { id: 15, name: 'Caramelo', transparent: false, solid: true, faces: uniform([0, 1]), color: '#f48fb1' },
+  // 16: Espacial
+  { id: 16, name: 'Espacial', transparent: false, solid: true, faces: uniform([1, 1]), color: '#7c4dff' },
 ];
 
 export function getBlock(id: number): BlockDef {

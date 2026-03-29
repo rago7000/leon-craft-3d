@@ -85,6 +85,15 @@
     .save-btn.danger { border-color: rgba(255,80,80,0.3); color: #ff8a80; }
     .save-btn.danger:hover { background: rgba(255,80,80,0.15); }
 
+    /* ===== STAR COUNTER ===== */
+    #star-counter {
+      position: fixed; top: 16px; right: 16px;
+      font-family: var(--font); font-size: 22px; font-weight: 700;
+      color: var(--gold);
+      text-shadow: 2px 2px 0 #000;
+      pointer-events: none; z-index: 20;
+    }
+
     /* ===== CROSSHAIR ===== */
     #crosshair {
       position: fixed; top: 50%; left: 50%;
@@ -280,6 +289,7 @@
     </div>
   </div>
 
+  <div id="star-counter">⭐ 0</div>
   <div id="crosshair"></div>
 
   <div id="hotbar-container">

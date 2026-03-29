@@ -18,6 +18,10 @@ export class Missions {
   blocksBroken = 0;
   blocksPlaced = 0;
   distanceWalked = 0;
+  specialBlocksPlaced = 0;
+  foundHouse = false;
+  foundMagicTree = false;
+  stars = 0;
   completedIds: number[] = [];
 
   onMissionComplete: ((name: string) => void) | null = null;
@@ -33,6 +37,10 @@ export class Missions {
       { id: 2, name: 'Construye una torre', target: 5, getProgress: () => Math.min(this.blocksPlaced, 5) },
       { id: 3, name: 'Explora el mundo', target: 100, getProgress: () => Math.floor(this.distanceWalked) },
       { id: 4, name: 'Constructor maestro', target: 20, getProgress: () => this.blocksPlaced },
+      { id: 5, name: 'Encuentra la casita', target: 1, getProgress: () => this.foundHouse ? 1 : 0 },
+      { id: 6, name: 'Visita el arbol magico', target: 1, getProgress: () => this.foundMagicTree ? 1 : 0 },
+      { id: 7, name: 'Coloca un bloque especial', target: 1, getProgress: () => Math.min(this.specialBlocksPlaced, 1) },
+      { id: 8, name: 'Colecciona 10 estrellas', target: 10, getProgress: () => this.stars },
     ];
   }
 
@@ -47,10 +55,11 @@ export class Missions {
     this.active = false;
   }
 
-  loadProgress(blocksBroken: number, blocksPlaced: number, distanceWalked: number, completedIds: number[]): void {
+  loadProgress(blocksBroken: number, blocksPlaced: number, distanceWalked: number, specialBlocksPlaced: number, completedIds: number[]): void {
     this.blocksBroken = blocksBroken;
     this.blocksPlaced = blocksPlaced;
     this.distanceWalked = distanceWalked;
+    this.specialBlocksPlaced = specialBlocksPlaced;
     this.completedIds = [...completedIds];
   }
 
