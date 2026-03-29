@@ -10,6 +10,8 @@ export class SoundManager {
     this.buffers.set('reward', this.generateArpeggio([523, 659, 784, 1047], 0.12, 'sine'));
     this.buffers.set('mission', this.generateArpeggio([392, 494, 587, 659, 784], 0.1, 'sine'));
     this.buffers.set('tutorial', this.generateSound(0.15, 800, 1200, 'sine'));
+    this.buffers.set('chirp', this.generateArpeggio([1200, 1500, 1800], 0.06, 'sine'));
+    this.buffers.set('treasure', this.generateArpeggio([523, 659, 784, 880, 1047], 0.15, 'sine'));
   }
 
   private generateSound(

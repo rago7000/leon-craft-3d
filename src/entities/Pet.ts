@@ -1,28 +1,30 @@
 import * as THREE from 'three';
 import { World } from '../world/World';
 import { isSolid } from '../world/BlockRegistry';
+import { SoundManager } from '../audio/SoundManager';
 
 export class Pet {
   group: THREE.Group;
   private body: THREE.Mesh;
   private head: THREE.Mesh;
-  private beak: THREE.Mesh;
-  private eyeL: THREE.Mesh;
-  private eyeR: THREE.Mesh;
   private bobTime = 0;
-  private targetX: number;
-  private targetZ: number;
   private posX: number;
   private posY: number;
   private posZ: number;
+  private sound: SoundManager;
 
-  constructor(scene: THREE.Scene, spawnX: number, spawnY: number, spawnZ: number) {
+  // Interaction state
+  private idleTime = 0;
+  private jumpAnim = 0; // >0 means doing a little hop
+  private chirpCooldown = 0;
+  nearPlayer = false; // true when within 2 blocks
+
+  constructor(scene: THREE.Scene, spawnX: number, spawnY: number, spawnZ: number, sound: SoundManager) {
+    this.sound = sound;
     this.group = new THREE.Group();
     this.posX = spawnX + 2;
     this.posY = spawnY;
     this.posZ = spawnZ + 2;
-    this.targetX = this.posX;
-    this.targetZ = this.posZ;
 
     const yellow = new THREE.MeshLambertMaterial({ color: 0xffeb3b });
     const orange = new THREE.MeshLambertMaterial({ color: 0xff9800 });
@@ -39,18 +41,27 @@ export class Pet {
     this.group.add(this.head);
 
     // Beak
-    this.beak = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.12), orange);
-    this.beak.position.set(0, 0.47, 0.22);
-    this.group.add(this.beak);
+    const beak = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.12), orange);
+    beak.position.set(0, 0.47, 0.22);
+    this.group.add(beak);
 
     // Eyes
-    this.eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), black);
-    this.eyeL.position.set(-0.08, 0.54, 0.16);
-    this.group.add(this.eyeL);
+    const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), black);
+    eyeL.position.set(-0.08, 0.54, 0.16);
+    this.group.add(eyeL);
 
-    this.eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), black);
-    this.eyeR.position.set(0.08, 0.54, 0.16);
-    this.group.add(this.eyeR);
+    const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), black);
+    eyeR.position.set(0.08, 0.54, 0.16);
+    this.group.add(eyeR);
+
+    // Small wings
+    const wingL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.25), yellow);
+    wingL.position.set(-0.24, 0.25, 0.0);
+    this.group.add(wingL);
+
+    const wingR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 0.25), yellow);
+    wingR.position.set(0.24, 0.25, 0.0);
+    this.group.add(wingR);
 
     this.group.position.set(this.posX, this.posY, this.posZ);
     scene.add(this.group);
@@ -58,25 +69,49 @@ export class Pet {
 
   update(dt: number, playerPos: THREE.Vector3, world: World): void {
     this.bobTime += dt * 3;
+    this.chirpCooldown = Math.max(0, this.chirpCooldown - dt);
 
-    // Target = near the player but not too close
     const dx = playerPos.x - this.posX;
     const dz = playerPos.z - this.posZ;
     const dist = Math.sqrt(dx * dx + dz * dz);
 
+    const wasFar = !this.nearPlayer;
+    this.nearPlayer = dist < 2.5;
+
+    // Chirp when player approaches
+    if (this.nearPlayer && wasFar && this.chirpCooldown <= 0) {
+      this.sound.play('chirp');
+      this.chirpCooldown = 5; // don't spam chirps
+      this.jumpAnim = 0.4; // excited hop
+    }
+
+    // Movement behavior changes based on player proximity
     if (dist > 3) {
-      // Move toward player
+      // Follow player
       const speed = Math.min(2.5, dist - 2) * dt;
       const nx = dx / dist;
       const nz = dz / dist;
       this.posX += nx * speed;
       this.posZ += nz * speed;
+      this.idleTime = 0;
+    } else if (dist > 1.5) {
+      // Slowly approach when player is still
+      this.idleTime += dt;
+      if (this.idleTime > 2) {
+        const speed = 0.5 * dt;
+        const nx = dx / dist;
+        const nz = dz / dist;
+        this.posX += nx * speed;
+        this.posZ += nz * speed;
+      }
+    } else {
+      this.idleTime += dt;
     }
 
-    // Simple ground snapping: find solid block below
+    // Ground snapping
     const checkX = Math.floor(this.posX);
     const checkZ = Math.floor(this.posZ);
-    let groundY = Math.floor(playerPos.y) - 1; // default near player
+    let groundY = Math.floor(playerPos.y) - 1;
 
     for (let y = Math.floor(playerPos.y) + 2; y >= Math.floor(playerPos.y) - 5; y--) {
       if (isSolid(world.getBlock(checkX, y, checkZ))) {
@@ -85,16 +120,23 @@ export class Pet {
       }
     }
 
-    // Smooth Y transition
-    const targetY = groundY;
-    this.posY += (targetY - this.posY) * Math.min(1, dt * 5);
+    this.posY += (groundY - this.posY) * Math.min(1, dt * 5);
 
-    // Bob animation
+    // Jump animation
+    let jumpOffset = 0;
+    if (this.jumpAnim > 0) {
+      this.jumpAnim -= dt;
+      jumpOffset = Math.sin(this.jumpAnim / 0.4 * Math.PI) * 0.3;
+    }
+
+    // Bob + head tilt when idle near player
     const bob = Math.sin(this.bobTime) * 0.05;
+    const headTilt = this.nearPlayer ? Math.sin(this.bobTime * 1.5) * 0.15 : 0;
+    this.head.rotation.z = headTilt;
 
-    this.group.position.set(this.posX, this.posY + bob, this.posZ);
+    this.group.position.set(this.posX, this.posY + bob + jumpOffset, this.posZ);
 
-    // Face the player (Y rotation only)
+    // Face the player
     if (dist > 0.5) {
       const angle = Math.atan2(dx, dz);
       this.group.rotation.y = angle;

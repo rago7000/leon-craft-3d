@@ -15,10 +15,12 @@ import { Rewards } from './ui/Rewards';
 import { SoundManager } from './audio/SoundManager';
 import { Pet } from './entities/Pet';
 import { Sparkles } from './rendering/Sparkles';
+import { Achievements } from './ui/Achievements';
+import { MusicManager } from './audio/MusicManager';
 import { generateAtlasDataURL } from './rendering/generateAtlas';
 import { RENDER_DISTANCE, BASE_HEIGHT } from './utils/constants';
 import { getTerrainHeight } from './utils/noise';
-import { placeSpawnLandmarks, SPAWN_HOUSE_POS, MAGIC_TREE_POS } from './world/TerrainGenerator';
+import { placeSpawnLandmarks, SPAWN_HOUSE_POS, MAGIC_TREE_POS, TREASURE_POS } from './world/TerrainGenerator';
 
 export class Game {
   private renderer!: THREE.WebGLRenderer;
@@ -40,6 +42,8 @@ export class Game {
   private sound!: SoundManager;
   private pet: Pet | null = null;
   private sparkles!: Sparkles;
+  private achievements!: Achievements;
+  private music!: MusicManager;
   private startScreen!: HTMLElement;
   private lastTime = 0;
   private running = false;
@@ -47,6 +51,7 @@ export class Game {
   private landmarksPlaced = false;
   private nearHouse = false;
   private nearMagicTree = false;
+  private nearTreasure = false;
 
   async init(): Promise<void> {
     // Scene
@@ -95,10 +100,23 @@ export class Game {
     this.sound = new SoundManager();
     await this.sound.init();
 
+    // Music
+    this.music = new MusicManager();
+    await this.music.init();
+
     // UI systems
     this.rewards = new Rewards(this.sound);
     this.tutorial = new Tutorial(this.sound);
     this.missions = new Missions(this.sound);
+    this.achievements = new Achievements();
+
+    // Achievement unlock callback
+    this.achievements.onUnlock = (name: string) => {
+      this.rewards.show(name);
+      if (this.sparkles && this.camera) {
+        this.sparkles.emit(this.camera.position.clone().add(new THREE.Vector3(0, 0, 0)), 8);
+      }
+    };
 
     // Tutorial callbacks
     this.tutorial.onStepComplete = () => {
@@ -124,6 +142,19 @@ export class Game {
       }
     };
 
+    // Mute button
+    const muteBtn = document.getElementById('mute-btn')!;
+    muteBtn.addEventListener('click', () => {
+      const muted = this.music.toggleMute();
+      muteBtn.textContent = muted ? '🔇' : '🔊';
+    });
+
+    // Achievements button
+    const achBtn = document.getElementById('ach-btn')!;
+    achBtn.addEventListener('click', () => this.achievements.toggle());
+    const achClose = document.getElementById('ach-close')!;
+    achClose.addEventListener('click', () => this.achievements.hide());
+
     // Start screen setup
     this.startScreen = document.getElementById('start-screen')!;
     this.setupStartScreen();
@@ -135,10 +166,18 @@ export class Game {
     const btnLoad = document.getElementById('btn-load')!;
     const btnReset = document.getElementById('btn-reset')!;
 
-    // Show load/reset buttons if save exists
+    // Show load/reset buttons and progress if save exists
+    const progressPanel = document.getElementById('progress-panel')!;
     if (this.saveManager.hasSave()) {
       btnLoad.classList.remove('hidden');
       btnReset.classList.remove('hidden');
+      // Show progress summary
+      const saved = this.saveManager.load();
+      if (saved) {
+        progressPanel.classList.remove('hidden');
+        document.getElementById('prog-stars')!.textContent = `⭐ ${saved.stars || 0}`;
+        document.getElementById('prog-ach')!.textContent = `🏆 ${this.achievements.count}/${this.achievements.total}`;
+      }
     }
 
     btnLeon.addEventListener('click', () => this.startGame('leon', false));
@@ -223,8 +262,11 @@ export class Game {
 
     // Pet (Leon mode only)
     if (this.gameMode.isLeon) {
-      this.pet = new Pet(this.scene, this.camera.position.x, this.camera.position.y - 1.6, this.camera.position.z);
+      this.pet = new Pet(this.scene, this.camera.position.x, this.camera.position.y - 1.6, this.camera.position.z, this.sound);
     }
+
+    // Start ambient music
+    this.music.start();
 
     // Start tutorial/missions for Leon mode
     if (this.gameMode.isLeon) {
@@ -293,7 +335,6 @@ export class Game {
 
       // Tutorial tracking
       if (this.tutorial.active) {
-        // Track movement
         if (this.playerController.distanceMoved > 5) {
           this.tutorial.playerMoved = true;
         }
@@ -302,15 +343,20 @@ export class Game {
         }
       }
 
+      // Achievement: first jump
+      if (this.input.wasPressed('Space')) {
+        this.achievements.unlock('first_jump');
+      }
+
       // Block interaction
       this.blockInteraction.update();
 
       if (this.input.mouseLeft) {
         if (this.blockInteraction.breakBlock()) {
           this.sound.play('break');
-          // Track for tutorial/missions
           this.tutorial.blockBroken = true;
           this.missions.blocksBroken++;
+          this.achievements.unlock('first_break');
           // Save the block change
           if (this.blockInteraction.currentTarget) {
             const t = this.blockInteraction.currentTarget;
@@ -324,6 +370,7 @@ export class Game {
           this.sound.play('place');
           this.tutorial.blockPlaced = true;
           this.missions.blocksPlaced++;
+          this.achievements.unlock('first_place');
           // Save block change
           if (this.blockInteraction.currentTarget) {
             const t = this.blockInteraction.currentTarget;
@@ -339,10 +386,16 @@ export class Game {
       // Track special blocks
       if (this.input.mouseRight && this.hud.selectedBlockId >= 11 && this.hud.selectedBlockId <= 16) {
         this.missions.specialBlocksPlaced++;
+        this.achievements.unlock('special_block');
       }
 
       // Update distance for missions
       this.missions.distanceWalked = this.playerController.distanceMoved;
+
+      // Achievement: builder (20 blocks), explorer (200 distance)
+      if (this.missions.blocksPlaced >= 20) this.achievements.unlock('builder');
+      if (this.missions.distanceWalked >= 200) this.achievements.unlock('explorer');
+      if (this.hud.stars >= 10) this.achievements.unlock('star_10');
 
       // Check proximity to landmarks (Leon mode)
       if (this.gameMode.isLeon) {
@@ -355,6 +408,7 @@ export class Game {
         if (Math.sqrt(dxH * dxH + dzH * dzH) < 5 && !this.nearHouse) {
           this.nearHouse = true;
           this.missions.foundHouse = true;
+          this.achievements.unlock('found_house');
           this.sparkles.emit(new THREE.Vector3(SPAWN_HOUSE_POS.x + 2, this.camera.position.y, SPAWN_HOUSE_POS.z + 2), 12);
         }
 
@@ -364,7 +418,24 @@ export class Game {
         if (Math.sqrt(dxT * dxT + dzT * dzT) < 5 && !this.nearMagicTree) {
           this.nearMagicTree = true;
           this.missions.foundMagicTree = true;
+          this.achievements.unlock('magic_tree');
           this.sparkles.emit(new THREE.Vector3(MAGIC_TREE_POS.x, this.camera.position.y + 2, MAGIC_TREE_POS.z), 15);
+        }
+
+        // Near treasure chest?
+        const dxG = px - TREASURE_POS.x;
+        const dzG = pz - TREASURE_POS.z;
+        if (Math.sqrt(dxG * dxG + dzG * dzG) < 3 && !this.nearTreasure) {
+          this.nearTreasure = true;
+          this.addStars(5);
+          this.sound.play('treasure');
+          this.achievements.unlock('treasure');
+          this.sparkles.emit(new THREE.Vector3(TREASURE_POS.x, this.camera.position.y, TREASURE_POS.z), 20);
+        }
+
+        // Pet friend achievement
+        if (this.pet && this.pet.nearPlayer) {
+          this.achievements.unlock('pet_friend');
         }
       }
     }
@@ -388,6 +459,11 @@ export class Game {
     this.sky.update(dt, this.camera.position);
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.copy(this.sky.fogColor);
+    }
+
+    // Night owl achievement (night = timeOfDay near 0 or near 1)
+    if (this.sky.timeOfDay < 0.15 || this.sky.timeOfDay > 0.85) {
+      this.achievements.unlock('night_owl');
     }
 
     // HUD

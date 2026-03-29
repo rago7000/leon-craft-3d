@@ -6,6 +6,7 @@ import { World } from './World';
 // Spawn landmarks positions (world coords)
 export const SPAWN_HOUSE_POS = { x: 4, z: 4 };
 export const MAGIC_TREE_POS = { x: 20, z: 15 };
+export const TREASURE_POS = { x: -8, z: 10 };
 
 export function generateTerrain(chunk: Chunk): void {
   const wx0 = chunk.cx * CHUNK_SIZE;
@@ -120,6 +121,7 @@ export function placeTree(chunk: Chunk, wx: number, wz: number, surfaceY: number
 export function placeSpawnLandmarks(world: World): void {
   placeSpawnHouse(world);
   placeMagicTree(world);
+  placeTreasure(world);
 }
 
 function setWorldBlock(world: World, x: number, y: number, z: number, id: number): void {
@@ -233,4 +235,22 @@ function placeMagicTree(world: World): void {
 
   // Rainbow block on very top
   setWorldBlock(world, tx, topY + 2, tz, 11); // arcoiris crown
+}
+
+function placeTreasure(world: World): void {
+  const gx = TREASURE_POS.x;
+  const gz = TREASURE_POS.z;
+  const groundY = getTerrainHeight(gx, gz, BASE_HEIGHT);
+
+  // Small 3x3 flat area
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      setWorldBlock(world, gx + dx, groundY, gz + dz, 1); // grass
+      setWorldBlock(world, gx + dx, groundY + 1, gz + dz, 0); // clear above
+    }
+  }
+
+  // Gift box: brillante base + estrella on top
+  setWorldBlock(world, gx, groundY + 1, gz, 14); // brillante block
+  setWorldBlock(world, gx, groundY + 2, gz, 13); // estrella on top
 }
